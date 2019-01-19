@@ -23,20 +23,58 @@ import java.util.Collections;
 import java.util.List;
 
 public class SampleCodeDetectorTest extends LintDetectorTest {
-    public void testBasic() {
+    public void testBroken() {
         lint().files(
-                java("" +
-                        "package test.pkg;\n" +
+                java( "src/test/pkg/TestClass1.java", "package test.pkg;\n" +
+                        "\n" +
                         "public class TestClass1 {\n" +
-                        "    // In a comment, mentioning \"lint\" has no effect\n" +
-                        "    private static String s1 = \"Ignore non-word usages: linting\";\n" +
-                        "    private static String s2 = \"Let's say it: lint\";\n" +
-                        "}"))
+                        "\n" +
+                        "    public void foo() {\n" +
+                        "        TestClass2.test();\n" +
+                        "    }\n" +
+                        "\n" +
+                        "}"),
+                java("src/pkg/TestClass2.java","package test.pkg;\n" +
+                        "\n" +
+                        "public class TestClass2 {\n" +
+                        "\n" +
+                        "    public static void test(){\n" +
+                        "\n" +
+                        "    }\n" +
+                        "\n" +
+                        "}\n"))
                 .run()
-                .expect("src/test/pkg/TestClass1.java:5: Warning: This code mentions lint: Congratulations [ShortUniqueId]\n" +
-                        "    private static String s2 = \"Let's say it: lint\";\n" +
-                        "                               ~~~~~~~~~~~~~~~~~~~~\n" +
-                        "0 errors, 1 warnings\n");
+                .expect("src/test/pkg/TestClass1.java:6: Warning: Found usage of TestClass [ShortUniqueId]\n" +
+                        "        TestClass2.test();\n" +
+                        "        ~~~~~~~~~~~~~~~~~\n" +
+                        "0 errors, 1 warnings");
+    }
+
+    public void testWorking() {
+        lint().files(
+                java( "src/test/pkg/TestClass1.java", "package test.pkg;\n" +
+                        "\n" +
+                        "public class TestClass1 {\n" +
+                        "\n" +
+                        "    public void foo() {\n" +
+                        "        TestClass2.test();\n" +
+                        "    }\n" +
+                        "\n" +
+                        "}"),
+                java("src/test/pkg/TestClass2.java","package test.pkg;\n" +
+                        "\n" +
+                        "public class TestClass2 {\n" +
+                        "\n" +
+                        "    public static void test(){\n" +
+                        "\n" +
+                        "    }\n" +
+                        "\n" +
+                        "}\n"))
+                .run()
+                .expect("src/test/pkg/TestClass1.java:6: Warning: Found usage of TestClass [ShortUniqueId]\n" +
+                        "        TestClass2.test();\n" +
+                        "        ~~~~~~~~~~~~~~~~~\n" +
+                        "0 errors, 1 warnings");
     }
 
     @Override

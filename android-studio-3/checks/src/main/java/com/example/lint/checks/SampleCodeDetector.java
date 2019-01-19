@@ -16,18 +16,14 @@
 package com.example.lint.checks;
 
 import com.android.tools.lint.client.api.UElementHandler;
-import com.android.tools.lint.detector.api.Category;
-import com.android.tools.lint.detector.api.Detector;
+import com.android.tools.lint.detector.api.*;
 import com.android.tools.lint.detector.api.Detector.UastScanner;
-import com.android.tools.lint.detector.api.Implementation;
-import com.android.tools.lint.detector.api.Issue;
-import com.android.tools.lint.detector.api.JavaContext;
-import com.android.tools.lint.detector.api.Scope;
-import com.android.tools.lint.detector.api.Severity;
-
+import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiMethod;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.uast.UCallExpression;
+import org.jetbrains.uast.UClass;
 import org.jetbrains.uast.UElement;
-import org.jetbrains.uast.ULiteralExpression;
-import org.jetbrains.uast.UastLiteralUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +34,11 @@ import java.util.List;
  * the word "lint".
  */
 public class SampleCodeDetector extends Detector implements UastScanner {
+
+    private static final String CLASSNAME = "test.pkg.TestClass2";
+    private static final String MESSAGE = "Found usage of TestClass";
+    private static final String METHOD_NAME = "test";
+
     /** Issue describing the problem and pointing to the detector implementation */
     public static final Issue ISSUE = Issue.create(
             // ID: used in @SuppressLint warnings etc
@@ -61,33 +62,14 @@ public class SampleCodeDetector extends Detector implements UastScanner {
                     Scope.JAVA_FILE_SCOPE));
 
     @Override
-    public List<Class<? extends UElement>> getApplicableUastTypes() {
-        return Collections.singletonList(ULiteralExpression.class);
+    public List<String> getApplicableMethodNames() {
+        return Collections.singletonList(METHOD_NAME);
     }
 
-    @Override
-    public UElementHandler createUastHandler(JavaContext context) {
-        // Not: Visiting UAST nodes is a pretty general purpose mechanism;
-        // Lint has specialized support to do common things like "visit every class
-        // that extends a given super class or implements a given interface", and
-        // "visit every call site that calls a method by a given name" etc.
-        // Take a careful look at UastScanner and the various existing lint check
-        // implementations before doing things the "hard way".
-        // Also be aware of context.getJavaEvaluator() which provides a lot of
-        // utility functionality.
-        return new UElementHandler() {
-            @Override
-            public void visitLiteralExpression(ULiteralExpression expression) {
-                String string = UastLiteralUtils.getValueIfStringLiteral(expression);
-                if (string == null) {
-                    return;
-                }
-
-                if (string.contains("lint") && string.matches(".*\\blint\\b.*")) {
-                    context.report(ISSUE, expression, context.getLocation(expression),
-                            "This code mentions `lint`: **Congratulations**");
-                }
-            }
-        };
+    @Override public void visitMethodCall(@NotNull JavaContext context, @NotNull UCallExpression node, @NotNull PsiMethod method) {
+        PsiClass containingClass = method.getContainingClass();
+        if (containingClass != null && CLASSNAME.equals(containingClass.getQualifiedName())) {
+            context.report(ISSUE, node, context.getLocation(node), MESSAGE);
+        }
     }
 }
